@@ -52,6 +52,7 @@
 #include <vtkMRMLDisplayNode.h>
 #include <vtkMRMLModelNode.h>
 #include <vtkMRMLScene.h>
+#include <vtkMRMLViewNode.h>
 
 // VTK includes
 #include <vtkColorTransferFunction.h>
@@ -629,6 +630,7 @@ void qSlicerIsodoseModuleWidget::setIsolineVisibility(bool visible)
   for (int i=0; i<childModelNodes->GetNumberOfItems(); ++i)
   {
     vtkMRMLModelNode* modelNode = vtkMRMLModelNode::SafeDownCast(childModelNodes->GetItemAsObject(i));
+    modelNode->GetDisplayNode()->SetVisibility(true);
     modelNode->GetDisplayNode()->SetSliceIntersectionVisibility(visible);
   }
 }
@@ -660,13 +662,39 @@ void qSlicerIsodoseModuleWidget::setIsosurfaceVisibility(bool visible)
     return;
   }
 
+  /*vtkSmartPointer<vtkCollection> abstractViewNodes =
+    this->mrmlScene()->GetNodesByClass("vtkMRMLAbstractViewNode");
+  abstractViewNodes->InitTraversal();*/
+  vtkSmartPointer<vtkCollection> viewNodes =
+    this->mrmlScene()->GetNodesByClass("vtkMRMLViewNode");
+  viewNodes->InitTraversal();
+
   vtkSmartPointer<vtkCollection> childModelNodes = vtkSmartPointer<vtkCollection>::New();
   modelHierarchyNode->GetChildrenModelNodes(childModelNodes);
   childModelNodes->InitTraversal();
   for (int i=0; i<childModelNodes->GetNumberOfItems(); ++i)
   {
     vtkMRMLModelNode* modelNode = vtkMRMLModelNode::SafeDownCast(childModelNodes->GetItemAsObject(i));
-    modelNode->GetDisplayNode()->SetVisibility(visible);
+    modelNode->GetDisplayNode()->SetVisibility(true);
+
+    if (!visible)
+    {
+      //for (int j = 0; j< abstractViewNodes->GetNumberOfItems(); ++j)
+      for (int j = 0; j< viewNodes->GetNumberOfItems(); ++j)
+      {
+        vtkMRMLViewNode* viewNode =
+          //vtkMRMLViewNode::SafeDownCast(abstractViewNodes->GetItemAsObject(i));
+          vtkMRMLViewNode::SafeDownCast(viewNodes->GetItemAsObject(i));
+        /*vtkMRMLSliceNode* sliceNode =
+          vtkMRMLSliceNode::SafeDownCast(abstractViewNodes->GetItemAsObject(i));*/
+
+          modelNode->GetDisplayNode()->RemoveViewNodeID(viewNode->GetID());
+      }
+    }
+    else
+    {
+      modelNode->GetDisplayNode()->RemoveAllViewNodeIDs();
+    }
   }
 }
 
